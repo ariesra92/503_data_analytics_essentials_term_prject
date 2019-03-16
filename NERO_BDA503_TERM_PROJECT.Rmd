@@ -1,0 +1,340 @@
+---
+title: "BDA503 Term Project / Analyzing Bank Marketing Data "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Group Name: NERO
+## Instructor: Associate Prof. Özgür Özlük
+## Input:Bank_Marketing.txt 
+
+
+## Load Required Modules and Data
+
+
+```{r cars}
+#install.packages("psych")
+#install.packages("caret")
+#install.packages("rpart")
+#install.packages('GGally')
+#library(GGally)
+#library(psych)
+#library(ggplot2)
+#library(caret)
+#library(rpart)
+#library(rattle)
+
+
+
+```
+
+
+Setting working directory, loading data into the environment
+
+
+```{r cars1}
+setwd("C:/Users/aries/Desktop/MEF/503_Data_Analytics_Essentials/Term_Project")
+bank <- read.table("bank_additional_full.csv", header=TRUE,sep=";")
+
+```
+
+Lets look at dataset and generate initial understanding about the column types
+
+```{r cars2}
+str(bank)
+```
+
+
+## Missing Value Check
+
+```{r cars3}
+# A quick check:
+# If newbank has same number of observation that implies no NA value present
+
+newbank <- na.omit(bank)
+nrow(newbank)==nrow(bank)
+
+if(length(which(is.na(bank$job)==TRUE)>0)){
+  print("There are missing values")
+} else{
+  print("No missing values")
+}
+
+```
+
+Missing check is done for job below. We donot have to repeat this process because we have already seen that there is no missing value above ((no.omit/bank) formula)
+
+## Outlier detection and treatment
+
+```{r cars4}
+# Let's find the range of individual variables#
+summary(bank)
+```
+
+```{r cars5}
+# Lets look at age variable in more detail, if its more there might be outlier #
+boxplot(bank$age, main="Age Box plot",
+        yaxt="n", xlab="Age", horizontal=TRUE,
+        col=terrain.colors(0))
+```
+
+```{r cars6}
+# From Boxplot it can be seen that there is outlier. By plotting histogram we can ensure if there are outliers or not
+hist(bank$age,col=terrain.colors(10))
+
+```
+
+
+
+```{r cars7}
+# We choose to remove outlier values for age with using following code.
+banksub <- subset(bank,age<60)
+
+```
+
+
+## Correlation Analysis
+
+This analysis can help us decide if we can drop some columns/predictors depending upon its correlation with the outcome variable
+
+Dataset divided into two to understand/interpret results while doing correlation analysis. 
+
+```{r cars10}
+
+#pairs.panels(banksub[, c(1:8,21)])
+
+```
+
+From first figure, it can be seen that there is no correlation coefficent greater than 0.7; therefore, we can say that there is no correlated variables in first group of variables.
+
+Also, variables have lower correlation with the outcome variable (y) were dropped which are loan and housing.
+
+```{r cars11}
+
+#pairs.panels(banksub[, c(9:21)])
+
+```
+
+When we look at second figure, emp.var.rate and cons.price.idx has 0.78 correlation coefficient which is greater than 0.7. So, we can say that these two variables are positive correlated with each other. It also makes sense with logic, because we expect that when the consumer price index is getting increased, employment variation rate(how many people are being hired or fired) increases to adapt this economic changes.
+
+Variables which have higher correlation coefficient with each other are given in follow. We exctracted euribor3m and nr.employed because they have higher correlation with other variable
+
+euribor3m vs emp.var.rate : 0.97
+euribor3m vs cons.price.idx : 0.70
+euribor3m vs nr.employed : 0.95
+nr.employed vs emp.var.rate : 0.91
+
+Also, variables have lower correlation with the outcome variable (y) were dropped which are month, day_of_week.
+
+## Subset Selection
+
+
+As we mentioned above, we have already dropped variables which are loan, housing, month, day_of_week, euribor3m, nr.employed. Apart from these variable, duration also discarded because it is related with target variable. 
+
+
+```{r cars14}
+banksub2 <-banksub[, c(1:5,8,12,13,14,15,16,17,18,21)]
+
+```
+
+
+```{r cars15}
+str(banksub2)
+```
+
+
+```{r cars16}
+#Correlation analysis repeated for selected variables.
+#pairs.panels(banksub2)
+
+```
+
+## Binning and data Transformation
+
+To prepare data for model development, basic variable transformation and attribute binning has been done. 
+
+
+```{r cars17}
+banksub2$age <- cut(banksub2$age, c(1,20,40,60,100))
+banksub2$is_divorced <- ifelse( banksub2$marital == "divorced", 1, 0)
+banksub2$is_single <- ifelse( banksub2$marital == "single", 1, 0)
+banksub2$is_married <- ifelse( banksub2$marital == "married", 1, 0)
+banksub2$marital <- NULL
+
+```
+
+Let's look at new prepared dataset which is ready for model development.
+
+```{r cars18}
+str(banksub2)
+
+```
+
+## Training and testing split
+
+Dataset is divided into train(%70) and test(%30) dataset.
+
+
+```{r cars19}
+
+#inTrain <- createDataPartition(y=banksub2$y ,p=0.7,list=FALSE)
+#trainset <- banksub2[inTrain,]
+#testset <- banksub2[-inTrain,]
+
+
+```
+
+
+Let's check how target is distrubuted in train and test dataset. It can be seen that target distrubution in the samples is the same.(%12)
+
+
+```{r cars20}
+
+
+#table(trainset$y); table(testset$y)
+
+
+
+```
+
+##Decision Tree
+
+```{r cars21}
+#library(rpart)
+#install.packages("rpart.plot")
+#library(rpart.plot)
+#install.packages("rattle")
+#library(rattle)
+#install.packages("caret")
+#library(caret)
+
+```
+
+Decision tree model is performed with all variables and recorded into dt_model function.
+
+```{r cars200}
+#dt_model<- rpart(y ~ ., data = trainset)
+#fancyRpartPlot(dt_model)
+#summary(dt_model)
+
+```
+
+Decision Tree performance results on test sample are listed below. Model has high accuracy value (%90).
+
+
+```{r cars23}
+
+#################Testing Decision Tree#################
+#predictions <- predict(dt_model, testset, type = "class")
+
+# Lets try for individual Values
+#predict(dt_model, testset)
+
+#What is predicted
+#table(predictions)
+
+# Lets look at the confusion matrix
+#confusion.matrix <- prop.table(table(predictions, testset$y))
+#confusion.matrix
+#confusionMatrix(predictions,testset$y)
+
+```
+
+
+## Random Forest
+
+Random Forest model is performed for benchmarking with decision tree model and recorded into model function.
+
+```{r cars24}
+
+#install.packages("randomForest")
+#library(randomForest)
+
+#model <- randomForest(y ~ ., data=trainset)
+#model
+#importance of each predictor
+#importance(model)
+
+```
+
+
+
+
+Random Forest performance results on test sample are listed below. Model has high accuracy value (%90) same with decision tree.
+
+
+```{r cars25}
+
+#library(caret)
+#predicted <- predict(model, testset)
+#table(predicted)
+#confusionMatrix(predicted, testset$y)
+
+```
+
+## Cluster Analysis
+
+Supervised learning algorithm  has been used to predict probability of subscribed a term deposit or not. In this analysis, we used random forest and decision tree prediction algorithms. Both models performed with same accuracy value.
+
+Apart from supervised learning, we can also look at unsupervised learning algorithm  especially to cluster the customer into different customer segments to take diffrent actions. In our cases, we can use cluster algorthm to examine different customer segments.
+
+
+## K-means Clustering
+
+K-means clustering is a type of unsupervised learning. The goal of this algorithm is to find groups in the data, with the number of groups represented by the variable K. The algorithm works iteratively to assign each data point to one of K groups based on the features that are provided. Data points are clustered based on feature similarity. 
+
+Before using K-means clustring, we should be sure that all input variables are numeric. If they are not, they should be transformed into numeric format. After taking care of transformation, we need to standardize inputs by substracting their respective means and dividing by their standard deviations.
+
+
+```{r cars26}
+
+feat.scaled <- scale(banksub[,c("age","cons.price.idx")])
+
+```
+
+We first try the clustering algorithm (k-means) with k=4, meaning that we want 4 different clusters or customer segments.
+
+```{r cars100}
+
+set.seed(15555)
+pclusters <- kmeans(feat.scaled, 4, nstart=20, iter.max=100)
+
+groups <- pclusters$cluster
+clusterDF <- cbind(as.data.frame(feat.scaled), Cluster=as.factor(groups))
+
+
+#p <- ggplot(clusterDF, aes(x=age, y=cons.price.idx))
+#p + geom_point(aes(color=clusterDF.Cluster) 
+
+```
+
+
+
+```{r cars27}
+
+
+```
+
+
+
+```{r cars28}
+
+
+```
+
+
+
+```{r cars29}
+
+
+```
+
+
+
+```{r cars30}
+
+
+```
